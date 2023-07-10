@@ -24,12 +24,16 @@ def login():
 
     # Verificar las credenciales de inicio de sesión en la base de datos
     cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email = %s AND passw = %s", (email, passw))
+    cur.execute("SELECT id, u_name FROM users WHERE email = %s AND passw = %s", (email, passw))
     user = cur.fetchone()
 
     if user is not None:
         # Las credenciales de inicio de sesión son correctas
-        return jsonify({'mensaje': 'Inicio de sesión exitoso'})
+        user_data = {
+            'id': user[0],
+            'name': user[1]
+        }
+        return jsonify({'mensaje': 'Inicio de sesión exitoso', 'user': user_data})
     else:
         # Las credenciales de inicio de sesión son incorrectas
         return jsonify({'mensaje': 'Credenciales de inicio de sesión incorrectas'}), 401
