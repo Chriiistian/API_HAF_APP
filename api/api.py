@@ -69,22 +69,33 @@ def crear_ordenes_compra():
     # Obtiene los datos de las órdenes desde la solicitud
     datos_ordenes = request.get_json()
 
+    # Obtener el último ID de orden de compra
+    cur = conn.cursor()
+    cur.execute("SELECT MAX(id) FROM shop")
+    last_order_id = cur.fetchone()[0]
+    if last_order_id is None:
+        last_order_id = 0
+
     for datos_orden in datos_ordenes:
+        # Generar un nuevo ID para la orden de compra
+        new_order_id = last_order_id + 1
+
         # Extraer los datos de cada orden
         value = datos_orden['valor']
         shop_date = datos_orden['fecha']
         id_item = datos_orden['id_item']
         id_user = datos_orden['id_user']
-        
-        # Insertar cada orden de compra en la base de datos
-        cur = conn.cursor()
-        cur.execute("INSERT INTO shop (id_user, id_item, shop_date, value) VALUES (%s, %s, %s, %s)",
-                    (id_user, id_item, shop_date, value))
+
+        # Insertar la orden de compra en la base de datos
+        cur.execute("INSERT INTO shop (id, id_user, id_item, shop_date, value) VALUES (%s, %s, %s, %s, %s)",
+                    (new_order_id, id_user, id_item, shop_date, value))
         conn.commit()
+
+        # Actualizar el último ID de orden de compra
+        last_order_id = new_order_id
 
     # Retorna una respuesta de éxito en formato JSON
     return jsonify({'mensaje': 'Órdenes de compra creadas correctamente'})
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
