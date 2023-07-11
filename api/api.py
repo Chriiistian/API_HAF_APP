@@ -24,14 +24,16 @@ def login():
 
     # Verificar las credenciales de inicio de sesión en la base de datos
     cur = conn.cursor()
-    cur.execute("SELECT id, u_name FROM users WHERE email = %s AND passw = %s", (email, passw))
+    cur.execute("SELECT id, u_name, type_user, email FROM users WHERE email = %s AND passw = %s", (email, passw))
     user = cur.fetchone()
 
     if user is not None:
         # Las credenciales de inicio de sesión son correctas
         user_data = {
             'id': user[0],
-            'name': user[1]
+            'name': user[1],
+            'type_user': user[2],
+            'email': user[3]
         }
         return jsonify({'mensaje': 'Inicio de sesión exitoso', 'user': user_data})
     else:
@@ -96,6 +98,57 @@ def crear_ordenes_compra():
 
     # Retorna una respuesta de éxito en formato JSON
     return jsonify({'mensaje': 'Órdenes de compra creadas correctamente'})
+
+# Ruta para obtener las compras del usuario
+@app.route('/purchases', methods=['GET'])
+def obtener_compras():
+    # Obtiene el ID de usuario de la solicitud
+    user_id = request.args.get('user_id')
+
+    # Lógica para obtener las compras del usuario desde la base de datos
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM shop WHERE id_user = %s", (user_id,))
+    purchases = cur.fetchall()
+
+    # Preparar los datos de las compras en una lista de diccionarios
+    lista_compras = []
+    for purchase in purchases:
+        purchase_dict = {
+            'id': purchase[0],
+            'amount': purchase[4],
+            'date': purchase[3],
+        }
+        lista_compras.append(purchase_dict)
+
+    # Retorna las compras en formato JSON
+    return jsonify(lista_compras)
+
+# Ruta para cambiar la contraseña
+@app.route('/change_password', methods=['POST'])
+def change_password():
+    # Obtiene los datos del cambio de contraseña desde la solicitud
+    datos_cambio = request.get_json()
+
+    # Extraer los datos del cambio de contraseña
+    current_password = datos_cambio['current_password']
+    new_password = datos_cambio['new_password']
+    user_id = datos_cambio['user_id']
+
+    # Verificar las credenciales de inicio de sesión en la base de datos
+    cur = conn.cursor()
+    cur.execute("SELECT passw FROM users WHERE id = %s", (user_id,))
+    user_password = cur.fetchone()
+
+    if user_password is not None and user_password[0] == current_password:
+        # Cambiar la contraseña en la base de datos
+        cur.execute("UPDATE users SET passw = %s WHERE id = %s", (new_password, user_id))
+        conn.commit()
+
+        # Retorna una respuesta de éxito en formato JSON
+        return jsonify({'mensaje': 'La contraseña ha sido cambiada exitosamente'})
+    else:
+        # La contraseña actual es incorrecta
+        return jsonify({'mensaje': 'La contraseña actual es incorrecta'}), 401
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
